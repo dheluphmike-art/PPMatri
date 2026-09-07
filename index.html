@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Maya: Partikel Penyusun Atom</title>
+    <!-- Tailwind CSS untuk Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js untuk animasi 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Abu-abu muda */
+        }
+        .canvas-container {
+            width: 100%;
+            max-width: 600px;
+            height: 400px;
+            margin: 0 auto;
+            border: 2px solid #cbd5e1;
+            border-radius: 0.5rem;
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+            user-select: none;
+        }
+        .proton { background-color: #ef4444; width: 20px; height: 20px; z-index: 2;} /* Merah */
+        .neutron { background-color: #3b82f6; width: 20px; height: 20px; z-index: 2;} /* Biru */
+        .electron { background-color: #eab308; width: 10px; height: 10px; z-index: 3;} /* Kuning */
+        
+        .orbit {
+            position: absolute;
+            border: 1px dashed #94a3b8;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        /* Animasi Rotasi Elektron */
+        @keyframes orbit-spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        .orbit-animated {
+            animation: orbit-spin linear infinite;
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Drag and drop styles */
+        .draggable { cursor: grab; }
+        .draggable:active { cursor: grabbing; }
+        
+        .dropzone {
+            border: 2px dashed #9ca3af;
+            border-radius: 0.5rem;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f9fafb;
+            transition: all 0.2s;
+        }
+        .dropzone.dragover {
+            background-color: #e0f2fe;
+            border-color: #3b82f6;
+        }
+        
+        /* Message Box */
+        #message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .msg-success { background-color: #10b981; }
+        .msg-error { background-color: #ef4444; }
+        .msg-info { background-color: #3b82f6; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div id="message-box"></div>
+
+    <div class="container mx-auto p-4 max-w-5xl mt-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-blue-700 mb-2">Laboratorium Maya Kimia</h1>
+            <p class="text-lg text-gray-600">Partikel Penyusun Materi: Atom, Ion, dan Molekul</p>
+        </header>
+
+        <!-- Navigasi Menu -->
+        <div class="flex justify-center mb-6 bg-white rounded-lg shadow p-2">
+            <button onclick="showTab('materi')" id="btn-materi" class="flex-1 py-2 px-4 rounded-md mx-1 font-semibold text-blue-600 bg-blue-100 transition-colors">Ringkasan Materi</button>
+            <button onclick="showTab('simulasi')" id="btn-simulasi" class="flex-1 py-2 px-4 rounded-md mx-1 font-semibold text-gray-600 hover:bg-gray-100 transition-colors">Simulasi Interaktif</button>
+            <button onclick="showTab('latihan')" id="btn-latihan" class="flex-1 py-2 px-4 rounded-md mx-1 font-semibold text-gray-600 hover:bg-gray-100 transition-colors">Latihan Pemahaman</button>
+        </div>
+
+        <div id="tab-materi" class="tab-content active bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Ringkasan Materi</h2>
+            
+            <div class="space-y-12">
+                <!-- 1 Atom -->
+                <div class="md:flex md:items-center md:gap-8">
+                    <div class="md:w-1/2">
+                        <h3 class="text-xl font-semibold text-blue-600 flex items-center"><span class="bg-blue-100 text-blue-800 p-2 rounded-full mr-2">1</span> Atom</h3>
+                        <p class="mt-2 text-gray-700 leading-relaxed">Atom adalah unit dasar penyusun materi. Atom terdiri dari inti yang padat (nukleus) di tengah dan awan elektron yang mengelilinginya.</p>
+                        <ul class="list-disc list-inside mt-2 text-gray-700 ml-4">
+                            <li><strong>Proton (+):</strong> Partikel bermuatan positif di dalam inti atom. Jumlah proton menentukan unsur apa atom tersebut (Nomor Atom).</li>
+                            <li><strong>Neutron (0):</strong> Partikel tidak bermuatan (netral) di dalam inti atom.</li>
+                            <li><strong>Elektron (-):</strong> Partikel bermuatan negatif yang bergerak mengelilingi inti atom dalam lintasan tertentu (orbit/kulit).</li>
+                        </ul>
+                        <p class="mt-4 text-sm bg-gray-100 p-3 rounded border-l-4 border-gray-400"><em>Sifat Atom Netral:</em> Jumlah proton sama dengan jumlah elektron.</p>
+                    </div>
+                    <div class="md:w-1/2 mt-6 md:mt-0">
+                        <div id="canvas-materi-atom" class="w-full h-72 bg-slate-900 rounded-xl shadow-inner relative flex items-center justify-center overflow-hidden border-2 border-slate-700"></div>
+                        <p class="text-center text-xs text-gray-500 mt-2 italic">Animasi 3D Struktur Atom (Elektron mengorbit Inti)</p>
+                    </div>
+                </div>
+
+                <!-- 2 Ion -->
+                <div class="md:flex md:items-center md:gap-8">
+                    <div class="md:w-1/2 order-2 md:order-1 mt-6 md:mt-0">
+                        <div id="canvas-materi-ion" class="w-full h-72 bg-slate-900 rounded-xl shadow-inner relative flex items-center justify-center overflow-hidden border-2 border-slate-700"></div>
+                        <p class="text-center text-xs text-gray-500 mt-2 italic">Animasi 3D Kation (Sisa elektron sedikit, Muatan Positif)</p>
+                    </div>
+                    <div class="md:w-1/2 order-1 md:order-2">
+                        <h3 class="text-xl font-semibold text-red-600 flex items-center"><span class="bg-red-100 text-red-800 p-2 rounded-full mr-2">2</span> Ion</h3>
+                        <p class="mt-2 text-gray-700 leading-relaxed">Ion adalah atom atau sekelompok atom yang memiliki muatan listrik total karena ketidakseimbangan jumlah proton dan elektron (melepas atau menerima elektron).</p>
+                        <ul class="list-disc list-inside mt-2 text-gray-700 ml-4">
+                            <li><strong>Kation (+):</strong> Ion bermuatan positif. Terjadi jika atom <em>melepaskan</em> elektron (Proton > Elektron). Contoh: Na⁺</li>
+                            <li><strong>Anion (-):</strong> Ion bermuatan negatif. Terjadi jika atom <em>menerima</em> elektron (Elektron > Proton). Contoh: Cl⁻</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 3 Molekul -->
+                <div class="md:flex md:items-center md:gap-8">
+                    <div class="md:w-1/2">
+                        <h3 class="text-xl font-semibold text-green-600 flex items-center"><span class="bg-green-100 text-green-800 p-2 rounded-full mr-2">3</span> Molekul</h3>
+                        <p class="mt-2 text-gray-700 leading-relaxed">Molekul terbentuk ketika dua atau lebih atom bergabung bersama melalui ikatan kimia (berbagi atau bertukar elektron). Ini adalah partikel terkecil dari suatu senyawa yang masih memiliki sifat senyawa tersebut.</p>
+                        <ul class="list-disc list-inside mt-2 text-gray-700 ml-4">
+                            <li><strong>Molekul Unsur:</strong> Terdiri dari atom-atom yang sama. Contoh: O₂ (Oksigen), H₂ (Hidrogen).</li>
+                            <li><strong>Molekul Senyawa:</strong> Terdiri dari atom-atom yang berbeda. Contoh: H₂O (Air), CO₂ (Karbon Dioksida).</li>
+                        </ul>
+                    </div>
+                    <div class="md:w-1/2 mt-6 md:mt-0">
+                        <div id="canvas-materi-molekul" class="w-full h-72 bg-slate-900 rounded-xl shadow-inner relative flex items-center justify-center overflow-hidden border-2 border-slate-700"></div>
+                        <p class="text-center text-xs text-gray-500 mt-2 italic">Animasi 3D Molekul Air (H₂O) berbagi Ikatan</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-simulasi" class="tab-content bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Simulasi: Membangun Atom & Ion</h2>
+            <p class="mb-4 text-gray-600">Pilih jenis simulasi di bawah ini untuk melihat struktur visual dari Atom, Kation, Anion, dan Molekul sederhana.</p>
+            
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Kontrol Simulasi -->
+                <div class="md:w-1/3 space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg border">
+                        <h3 class="font-bold mb-3">Pilih Partikel:</h3>
+                        <div class="space-y-2">
+                            <button onclick="renderSimulation('atom_h')" class="w-full text-left px-4 py-2 bg-white hover:bg-blue-50 border rounded transition">Atom Hidrogen (H)</button>
+                            <button onclick="renderSimulation('atom_he')" class="w-full text-left px-4 py-2 bg-white hover:bg-blue-50 border rounded transition">Atom Helium (He)</button>
+                            <button onclick="renderSimulation('atom_li')" class="w-full text-left px-4 py-2 bg-white hover:bg-blue-50 border rounded transition">Atom Litium (Li)</button>
+                            <hr class="my-2">
+                            <button onclick="renderSimulation('kation_li')" class="w-full text-left px-4 py-2 bg-white hover:bg-red-50 border rounded text-red-700 transition">Kation Litium (Li⁺)</button>
+                            <button onclick="renderSimulation('anion_f')" class="w-full text-left px-4 py-2 bg-white hover:bg-purple-50 border rounded text-purple-700 transition">Anion Fluorida (F⁻) - Skema</button>
+                            <hr class="my-2">
+                            <button onclick="renderSimulation('molekul_h2')" class="w-full text-left px-4 py-2 bg-white hover:bg-green-50 border rounded text-green-700 transition">Molekul Hidrogen (H₂)</button>
+                            <button onclick="renderSimulation('molekul_h2o')" class="w-full text-left px-4 py-2 bg-white hover:bg-green-50 border rounded text-green-700 transition">Molekul Air (H₂O)</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Info Box -->
+                    <div id="sim-info" class="bg-blue-50 p-4 rounded-lg border border-blue-200 hidden">
+                        <h4 id="sim-title" class="font-bold text-blue-800 mb-1"></h4>
+                        <p id="sim-desc" class="text-sm text-gray-700"></p>
+                        <div class="mt-3 flex gap-4 text-xs font-semibold">
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-500 inline-block mr-1"></span><span id="count-p"></span> P</div>
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block mr-1"></span><span id="count-n"></span> N</div>
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-500 inline-block mr-1"></span><span id="count-e"></span> E</div>
+                        </div>
+                        <div id="sim-charge" class="mt-2 text-sm font-bold p-1 rounded text-center"></div>
+                    </div>
+                </div>
+
+                <!-- Canvas Simulasi -->
+                <div class="md:w-2/3">
+                    <div id="sim-container" class="canvas-container relative bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center">
+                        <p id="sim-placeholder" class="text-gray-400">Pilih partikel di sebelah kiri untuk memulai simulasi.</p>
+                        <!-- Elemen simulasi 2D akan disuntikkan ke sini -->
+                    </div>
+                    <div class="mt-2 text-center text-sm text-gray-500">
+                        <span class="inline-block mr-4"><span class="text-red-500 font-bold">●</span> Proton (+)</span>
+                        <span class="inline-block mr-4"><span class="text-blue-500 font-bold">●</span> Neutron (0)</span>
+                        <span class="inline-block"><span class="text-yellow-500 font-bold">●</span> Elektron (-)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-latihan" class="tab-content bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">Latihan Pemahaman: Atom, Ion, dan Molekul</h2>
+            <p class="mb-4 text-gray-600">Tarik komponen (Proton, Neutron, Elektron) ke area perakitan untuk membentuk partikel yang diminta.</p>
+
+            <div class="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-200 shadow-sm">
+                <h3 class="font-bold text-lg text-yellow-800">Tugas Saat Ini: <span id="task-name" class="text-black">Atom Helium (He)</span></h3>
+                <p id="task-hint" class="text-sm text-gray-700 mt-1">Petunjuk: Atom Helium netral memiliki 2 proton.</p>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Gudang Partikel (Drag Source) -->
+                <div class="md:w-1/3 space-y-4">
+                    <div class="bg-gray-100 p-4 rounded-lg text-center border">
+                        <h4 class="font-bold mb-4 text-gray-700">Sumber Partikel</h4>
+                        
+                        <div class="flex justify-around items-center mb-6">
+                            <div class="flex flex-col items-center">
+                                <div class="particle proton draggable relative hover:scale-110 transition" draggable="true" ondragstart="drag(event)" id="drag-proton" style="width: 40px; height: 40px; font-size:18px;">+</div>
+                                <span class="text-xs mt-1 font-semibold text-red-600">Proton</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <div class="particle neutron draggable relative hover:scale-110 transition" draggable="true" ondragstart="drag(event)" id="drag-neutron" style="width: 40px; height: 40px; font-size:18px;">n</div>
+                                <span class="text-xs mt-1 font-semibold text-blue-600">Neutron</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <div class="particle electron draggable relative hover:scale-110 transition" draggable="true" ondragstart="drag(event)" id="drag-electron" style="width: 30px; height: 30px; font-size:16px;">-</div>
+                                <span class="text-xs mt-1 font-semibold text-yellow-600">Elektron</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 italic">Tarik partikel di atas ke area kerja.</p>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg border shadow-sm">
+                         <h4 class="font-bold mb-2 text-gray-700 text-sm">Status Saat Ini:</h4>
+                         <ul class="text-sm space-y-1">
+                             <li>Proton (+): <span id="current-p" class="font-bold text-red-500">0</span></li>
+                             <li>Neutron (0): <span id="current-n" class="font-bold text-blue-500">0</span></li>
+                             <li>Elektron (-): <span id="current-e" class="font-bold text-yellow-500">0</span></li>
+                         </ul>
+                         <div class="mt-3 text-center">
+                             <div id="current-charge" class="text-lg font-bold">Muatan: 0 (Netral)</div>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Area Kerja (Drop Zone) -->
+                <div class="md:w-2/3">
+                    <div class="border-2 border-gray-300 bg-gray-50 rounded-lg p-4 h-full min-h-[350px] flex flex-col relative overflow-hidden">
+                        <div class="flex justify-between items-center mb-2 z-10 relative">
+                            <h4 class="font-bold text-gray-700">Area Perakitan</h4>
+                            <button onclick="resetLatihan()" class="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm font-semibold transition">Reset Area</button>
+                        </div>
+                        
+                        <!-- Area Perakitan Atom -->
+                        <div class="flex-1 flex flex-col items-center justify-center relative mt-4">
+                            <!-- Dropzone Elektron (Orbit) -->
+                            <div id="orbit-dropzone" class="absolute w-72 h-72 border-2 border-dashed border-yellow-400 bg-yellow-50/50 rounded-full flex items-start justify-center pt-2 transition-colors duration-200"
+                                 ondrop="dropElectron(event)" ondragover="allowDrop(event)" ondragenter="dragEnterOrbit(event)" ondragleave="dragLeaveOrbit(event)">
+                                <span class="text-xs text-yellow-700 bg-white px-2 py-1 rounded-full opacity-90 shadow-sm mt-2">Area Orbit (Drop Elektron)</span>
+                            </div>
+
+                            <!-- Dropzone Inti -->
+                            <div id="nucleus-dropzone" class="z-10 w-32 h-32 border-2 border-dashed border-blue-400 bg-white rounded-full flex items-center justify-center relative transition-colors duration-200 shadow-inner"
+                                 ondrop="dropNucleus(event)" ondragover="allowDrop(event)" ondragenter="dragEnterNucleus(event)" ondragleave="dragLeaveNucleus(event)">
+                                <span class="text-xs text-blue-700 text-center px-2 opacity-90 absolute font-semibold bg-white/80 rounded">Inti Atom<br>(Drop P / N)</span>
+                                <div id="nucleus-particles" class="flex flex-wrap justify-center items-center content-center w-full h-full p-2 gap-1 relative z-20">
+                                    <!-- Partikel yang di-drop ke inti akan muncul di sini -->
+                                </div>
+                            </div>
+
+                            <!-- Container untuk elektron yang mengorbit -->
+                            <div id="orbiting-electrons" class="absolute w-72 h-72 pointer-events-none orbit-animated hidden z-20">
+                                <!-- Elektron akan ditambahkan via JS -->
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-center z-30 relative">
+                            <button onclick="checkAnswer()" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-lg transition transform hover:scale-105">Periksa Jawaban</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Berhasil -->
+            <div id="success-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-sm">
+                    <div class="text-5xl mb-2">🎉</div>
+                    <h3 class="text-2xl font-bold text-green-600 mb-2">Luar Biasa!</h3>
+                    <p class="text-gray-700 mb-4" id="success-msg">Anda berhasil merakit partikel dengan benar.</p>
+                    <button onclick="nextTask()" class="px-4 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 w-full transition">Tugas Selanjutnya</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // === FUNGSI UTILITAS UMUM ===
+        function showMessage(text, type) {
+            const msgBox = document.getElementById('message-box');
+            msgBox.textContent = text;
+            msgBox.className = ''; // Reset class
+            msgBox.classList.add('msg-' + type);
+            msgBox.style.display = 'block';
+            setTimeout(() => {
+                msgBox.style.display = 'none';
+            }, 3000);
+        }
+
+        // === LOGIKA NAVIGASI TAB ===
+        function showTab(tabId) {
+            // Sembunyikan semua tab
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Reset style tombol
+            document.querySelectorAll('button[id^="btn-"]').forEach(btn => {
+                btn.classList.remove('text-blue-600', 'bg-blue-100');
+                btn.classList.add('text-gray-600');
+            });
+
+            // Tampilkan tab yang dipilih
+            document.getElementById('tab-' + tabId).classList.add('active');
+            
+            // Highlight tombol yang aktif
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+            activeBtn.classList.add('text-blue-600', 'bg-blue-100');
+
+            // Trigger window resize agar kanvas 3D dirender ulang ke ukuran yg benar
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 50);
+        }
+
+        // =========================================================
+        // === LOGIKA THREE.JS UNTUK GAMBAR 3D DI RINGKASAN MATERI =
+        // =========================================================
+        const threeJSUpdates = []; // Menyimpan fungsi rotasi tiap frame
+
+        function initAll3DScenes() {
+            create3DScene('canvas-materi-atom', setupAtom3D);
+            create3DScene('canvas-materi-ion', setupIon3D);
+            create3DScene('canvas-materi-molekul', setupMolecule3D);
+        }
+
+        function create3DScene(containerId, setupSceneFunc) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const scene = new THREE.Scene();
+            
+            // Kamera
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.z = 15;
+
+            // Render (Background transparan agar mengikuti background div Tailwind)
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            // Pencahayaan yang membuat efek 3D muncul
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const pointLight = new THREE.PointLight(0xffffff, 0.9);
+            pointLight.position.set(10, 10, 15);
+            scene.add(pointLight);
+
+            // Panggil fungsi merakit scene (Atom/Ion/Molekul)
+            const updateFunc = setupSceneFunc(scene);
+            
+            if (updateFunc) {
+                threeJSUpdates.push(() => {
+                    updateFunc();
+                    renderer.render(scene, camera);
+                });
+            }
+
+            // Tangani Resize Window agar responsif
+            window.addEventListener('resize', () => {
+                if (container.clientWidth > 0) {
+                    camera.aspect = container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                }
+            });
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            threeJSUpdates.forEach(update => update()); // Putar semua scene
+        }
+
+        // 1. Setup Atom 3D
+        function setupAtom3D(scene) {
+            const nucleus = new THREE.Group();
+            const pMat = new THREE.MeshPhongMaterial({ color: 0xef4444, shininess: 80 }); 
+            const nMat = new THREE.MeshPhongMaterial({ color: 0x3b82f6, shininess: 80 }); 
+            const geo = new THREE.SphereGeometry(0.8, 32, 32);
+
+            for(let i=0; i<4; i++){
+                let p = new THREE.Mesh(geo, pMat); p.position.set((Math.random()-0.5)*1.5, (Math.random()-0.5)*1.5, (Math.random()-0.5)*1.5); nucleus.add(p);
+                let n = new THREE.Mesh(geo, nMat); n.position.set((Math.random()-0.5)*1.5, (Math.random()-0.5)*1.5, (Math.random()-0.5)*1.5); nucleus.add(n);
+            }
+            scene.add(nucleus);
+
+            const orbits = [];
+            const eMat = new THREE.MeshPhongMaterial({ color: 0xeab308, emissive: 0x554400 }); 
+            const eGeo = new THREE.SphereGeometry(0.4, 32, 32);
+
+            const createOrbit = (radius, angleX, angleY) => {
+                const pivot = new THREE.Group();
+                pivot.rotation.x = angleX; pivot.rotation.y = angleY;
+                
+                const ringGeo = new THREE.TorusGeometry(radius, 0.03, 16, 100);
+                const ringMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.3 });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = Math.PI / 2;
+                pivot.add(ring);
+
+                const electron = new THREE.Mesh(eGeo, eMat);
+                electron.position.x = radius;
+                pivot.add(electron);
+                
+                scene.add(pivot);
+                orbits.push(pivot);
+            };
+
+            createOrbit(4.5, Math.PI/3, 0);
+            createOrbit(4.5, -Math.PI/3, 0);
+            createOrbit(4.5, 0, Math.PI/3);
+            createOrbit(4.5, 0, -Math.PI/3);
+
+            return () => {
+                nucleus.rotation.y += 0.01; nucleus.rotation.x += 0.01;
+                orbits[0].rotation.z += 0.02; orbits[1].rotation.z += 0.03;
+                orbits[2].rotation.z += 0.025; orbits[3].rotation.z += 0.035;
+            };
+        }
+
+        // 2. Setup Ion 3D (Kation)
+        function setupIon3D(scene) {
+            const nucleus = new THREE.Group();
+            const pMat = new THREE.MeshPhongMaterial({ color: 0xef4444, shininess: 80 });
+            const nMat = new THREE.MeshPhongMaterial({ color: 0x3b82f6, shininess: 80 });
+            const geo = new THREE.SphereGeometry(0.9, 32, 32);
+
+            for(let i=0; i<3; i++){
+                let p = new THREE.Mesh(geo, pMat); p.position.set((Math.random()-0.5)*1.8, (Math.random()-0.5)*1.8, (Math.random()-0.5)*1.8); nucleus.add(p);
+            }
+            for(let i=0; i<4; i++){
+                let n = new THREE.Mesh(geo, nMat); n.position.set((Math.random()-0.5)*1.8, (Math.random()-0.5)*1.8, (Math.random()-0.5)*1.8); nucleus.add(n);
+            }
+            scene.add(nucleus);
+
+            const orbits = [];
+            const eMat = new THREE.MeshPhongMaterial({ color: 0xeab308, emissive: 0x554400 });
+            const eGeo = new THREE.SphereGeometry(0.4, 32, 32);
+
+            const pivot = new THREE.Group();
+            const ringGeo = new THREE.TorusGeometry(3.5, 0.03, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.3 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            pivot.add(ring);
+
+            const e1 = new THREE.Mesh(eGeo, eMat); e1.position.x = 3.5; pivot.add(e1);
+            const e2 = new THREE.Mesh(eGeo, eMat); e2.position.x = -3.5; pivot.add(e2);
+            scene.add(pivot); orbits.push(pivot);
+
+            // Simbol (+) melayang
+            const plusGeo = new THREE.BoxGeometry(0.5, 2, 0.2);
+            const plusMat = new THREE.MeshBasicMaterial({ color: 0xffaaaa, transparent: true, opacity: 0.8 });
+            const vBar = new THREE.Mesh(plusGeo, plusMat);
+            const hBar = new THREE.Mesh(plusGeo, plusMat);
+            hBar.rotation.z = Math.PI / 2;
+            const plusGroup = new THREE.Group();
+            plusGroup.add(vBar); plusGroup.add(hBar);
+            plusGroup.position.set(4, 4, 0); 
+            scene.add(plusGroup);
+
+            return () => {
+                nucleus.rotation.y += 0.01;
+                orbits[0].rotation.z += 0.03;
+                plusGroup.rotation.y += 0.02; 
+                plusGroup.position.y = 4 + Math.sin(Date.now() * 0.003) * 0.5; 
+            };
+        }
+
+        // 3. Setup Molekul 3D (H2O)
+        function setupMolecule3D(scene) {
+            const molecule = new THREE.Group();
+            
+            const oGeo = new THREE.SphereGeometry(2.5, 32, 32);
+            const oMat = new THREE.MeshPhongMaterial({ color: 0xef4444, shininess: 90 });
+            const oxygen = new THREE.Mesh(oGeo, oMat);
+            molecule.add(oxygen);
+
+            const hGeo = new THREE.SphereGeometry(1.2, 32, 32);
+            const hMat = new THREE.MeshPhongMaterial({ color: 0xf1f5f9, shininess: 50 });
+            
+            const h1 = new THREE.Mesh(hGeo, hMat); h1.position.set(2.2, -1.8, 0); molecule.add(h1);
+            const h2 = new THREE.Mesh(hGeo, hMat); h2.position.set(-2.2, -1.8, 0); molecule.add(h2);
+
+            const bondGeo = new THREE.CylinderGeometry(0.3, 0.3, 2.5);
+            const bondMat = new THREE.MeshPhongMaterial({ color: 0x94a3b8 });
+            
+            const bond1 = new THREE.Mesh(bondGeo, bondMat); bond1.position.set(1.1, -0.9, 0); bond1.rotation.z = -Math.PI / 4.5; molecule.add(bond1);
+            const bond2 = new THREE.Mesh(bondGeo, bondMat); bond2.position.set(-1.1, -0.9, 0); bond2.rotation.z = Math.PI / 4.5; molecule.add(bond2);
+
+            scene.add(molecule);
+            molecule.rotation.x = Math.PI / 6;
+
+            return () => {
+                molecule.rotation.y += 0.01;
+                molecule.rotation.z = Math.sin(Date.now() * 0.001) * 0.1;
+            };
+        }
+
+        // === LOGIKA SIMULASI VISUAL (2D DOM) ===
+        const simData = {
+            'atom_h': { title: 'Atom Hidrogen (H)', p: 1, n: 0, e: 1, charge: 0, desc: 'Atom paling sederhana. 1 Proton di inti, 1 Elektron mengorbit. Karena jumlah p dan e sama, ia netral.' },
+            'atom_he': { title: 'Atom Helium (He)', p: 2, n: 2, e: 2, charge: 0, desc: 'Atom stabil (gas mulia). Memiliki 2 proton dan 2 neutron di inti, dikelilingi 2 elektron di kulit pertama.' },
+            'atom_li': { title: 'Atom Litium (Li)', p: 3, n: 4, e: 3, charge: 0, desc: 'Logam alkali. Memiliki 3 proton. 2 elektron di kulit pertama, 1 elektron di kulit terluar (valensi).' },
+            'kation_li': { title: 'Kation Litium (Li⁺)', p: 3, n: 4, e: 2, charge: 1, desc: 'Atom Litium yang melepaskan 1 elektron terluarnya agar stabil. Kini proton (3) > elektron (2), sehingga bermuatan positif.' },
+            'anion_f': { title: 'Anion Fluorida (F⁻)', p: 9, n: 10, e: 10, charge: -1, desc: '(Skema Sederhana). Atom Fluor menerima 1 elektron untuk melengkapi kulit luarnya. Elektron (10) > Proton (9), bermuatan negatif.' },
+            'molekul_h2': { title: 'Molekul Hidrogen (H₂)', type: 'molecule', desc: 'Dua atom hidrogen saling berbagi elektron (ikatan kovalen) untuk mencapai kestabilan.' },
+            'molekul_h2o': { title: 'Molekul Air (H₂O)', type: 'molecule_h2o', desc: 'Satu atom Oksigen (O) berbagi elektron dengan dua atom Hidrogen (H) membentuk ikatan kovalen. Konfigurasi menjadi stabil.' }
+        };
+
+        function renderSimulation(id) {
+            const container = document.getElementById('sim-container');
+            const infoBox = document.getElementById('sim-info');
+            container.innerHTML = ''; // Clear canvas
+            
+            const data = simData[id];
+            if (!data) return;
+
+            document.getElementById('sim-placeholder')?.remove();
+            infoBox.classList.remove('hidden');
+            
+            // Update Info Box
+            document.getElementById('sim-title').textContent = data.title;
+            document.getElementById('sim-desc').textContent = data.desc;
+
+            if (data.type === 'molecule') {
+                renderMoleculeH2(container);
+                document.getElementById('count-p').textContent = '2';
+                document.getElementById('count-n').textContent = '0';
+                document.getElementById('count-e').textContent = '2';
+                const chargeEl = document.getElementById('sim-charge');
+                chargeEl.textContent = "Status: Molekul Netral";
+                chargeEl.className = "mt-2 text-sm font-bold p-1 rounded text-center bg-gray-200 text-gray-800";
+            } else if (data.type === 'molecule_h2o') {
+                renderMoleculeH2O(container);
+                document.getElementById('count-p').textContent = '10'; // 8 (O) + 2 (H)
+                document.getElementById('count-n').textContent = '8';  // 8 (O)
+                document.getElementById('count-e').textContent = '10'; // 8 (O) + 2 (H)
+                const chargeEl = document.getElementById('sim-charge');
+                chargeEl.textContent = "Status: Molekul Netral";
+                chargeEl.className = "mt-2 text-sm font-bold p-1 rounded text-center bg-gray-200 text-gray-800";
+            } else {
+                renderAtom(container, data);
+                document.getElementById('count-p').textContent = data.p;
+                document.getElementById('count-n').textContent = data.n;
+                document.getElementById('count-e').textContent = data.e;
+                
+                const chargeEl = document.getElementById('sim-charge');
+                if (data.charge === 0) {
+                    chargeEl.textContent = "Muatan: 0 (Atom Netral)";
+                    chargeEl.className = "mt-2 text-sm font-bold p-1 rounded text-center bg-gray-200 text-gray-800";
+                } else if (data.charge > 0) {
+                    chargeEl.textContent = `Muatan: +${data.charge} (Kation)`;
+                    chargeEl.className = "mt-2 text-sm font-bold p-1 rounded text-center bg-red-200 text-red-800";
+                } else {
+                    chargeEl.textContent = `Muatan: ${data.charge} (Anion)`;
+                    chargeEl.className = "mt-2 text-sm font-bold p-1 rounded text-center bg-purple-200 text-purple-800";
+                }
+            }
+        }
+
+        function renderAtom(container, data) {
+            const atomDiv = document.createElement('div');
+            atomDiv.className = 'relative w-full h-full flex items-center justify-center';
+            
+            const nucleus = document.createElement('div');
+            nucleus.className = 'absolute z-20 flex flex-wrap justify-center items-center w-16 h-16 rounded-full';
+            
+            const addParticleToNucleus = (type, label) => {
+                const p = document.createElement('div');
+                p.className = `particle ${type}`;
+                p.textContent = label;
+                const offsetX = (Math.random() - 0.5) * 20;
+                const offsetY = (Math.random() - 0.5) * 20;
+                p.style.position = 'absolute';
+                p.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+                nucleus.appendChild(p);
+            };
+
+            for (let i=0; i<data.p; i++) addParticleToNucleus('proton', '+');
+            for (let i=0; i<data.n; i++) addParticleToNucleus('neutron', ''); 
+            
+            atomDiv.appendChild(nucleus);
+
+            let eCount = data.e;
+            let shellLevel = 1;
+            const orbitSizes = [120, 220, 320]; 
+            
+            while (eCount > 0) {
+                let eInThisShell = Math.min(eCount, shellLevel === 1 ? 2 : 8);
+                eCount -= eInThisShell;
+                
+                const size = orbitSizes[shellLevel - 1];
+                
+                const orbitLine = document.createElement('div');
+                orbitLine.className = 'orbit';
+                orbitLine.style.width = `${size}px`;
+                orbitLine.style.height = `${size}px`;
+                atomDiv.appendChild(orbitLine);
+
+                const orbitAnim = document.createElement('div');
+                orbitAnim.className = 'orbit orbit-animated';
+                orbitAnim.style.width = `${size}px`;
+                orbitAnim.style.height = `${size}px`;
+                orbitAnim.style.border = 'none'; 
+                orbitAnim.style.animationDuration = `${shellLevel * 4}s`;
+                if (shellLevel % 2 === 0) orbitAnim.style.animationDirection = 'reverse';
+
+                const angleStep = 360 / eInThisShell;
+                for (let i = 0; i < eInThisShell; i++) {
+                    const e = document.createElement('div');
+                    e.className = 'particle electron';
+                    e.textContent = '-';
+                    const angle = (angleStep * i) * (Math.PI / 180);
+                    const radius = size / 2;
+                    const x = (size/2) + radius * Math.cos(angle) - 5;
+                    const y = (size/2) + radius * Math.sin(angle) - 5;
+                    
+                    e.style.left = `${x}px`;
+                    e.style.top = `${y}px`;
+                    orbitAnim.appendChild(e);
+                }
+                
+                atomDiv.appendChild(orbitAnim);
+                shellLevel++;
+            }
+
+            container.appendChild(atomDiv);
+        }
+
+        function renderMoleculeH2(container) {
+             const molDiv = document.createElement('div');
+             molDiv.className = 'relative w-full h-full flex items-center justify-center';
+             
+             // Atom H Kiri
+             const atom1 = document.createElement('div');
+             atom1.className = 'absolute z-20 flex items-center justify-center w-8 h-8';
+             atom1.style.transform = 'translateX(-30px)';
+             const p1 = document.createElement('div');
+             p1.className = 'particle proton'; p1.textContent = '+';
+             atom1.appendChild(p1);
+             molDiv.appendChild(atom1);
+
+             const orbit1 = document.createElement('div');
+             orbit1.className = 'absolute border border-dashed border-gray-500 rounded-full z-10';
+             orbit1.style.width = '100px'; orbit1.style.height = '100px';
+             orbit1.style.top = '50%'; orbit1.style.left = '50%';
+             orbit1.style.marginTop = '-50px'; orbit1.style.marginLeft = '-80px';
+             molDiv.appendChild(orbit1);
+
+             // Atom H Kanan
+             const atom2 = document.createElement('div');
+             atom2.className = 'absolute z-20 flex items-center justify-center w-8 h-8';
+             atom2.style.transform = 'translateX(30px)';
+             const p2 = document.createElement('div');
+             p2.className = 'particle proton'; p2.textContent = '+';
+             atom2.appendChild(p2);
+             molDiv.appendChild(atom2);
+
+             const orbit2 = document.createElement('div');
+             orbit2.className = 'absolute border border-dashed border-gray-500 rounded-full z-10';
+             orbit2.style.width = '100px'; orbit2.style.height = '100px';
+             orbit2.style.top = '50%'; orbit2.style.left = '50%';
+             orbit2.style.marginTop = '-50px'; orbit2.style.marginLeft = '-20px';
+             molDiv.appendChild(orbit2);
+
+             // Elektron yang di-share di tengah
+             const eRegion = document.createElement('div');
+             eRegion.className = 'absolute z-30 flex gap-2';
+             eRegion.style.top = '50%'; eRegion.style.left = '50%';
+             eRegion.style.transform = 'translate(-50%, -50%)';
+             
+             const e1 = document.createElement('div'); e1.className = 'particle electron relative'; e1.textContent = '-'; e1.style.position = 'static';
+             const e2 = document.createElement('div'); e2.className = 'particle electron relative'; e2.textContent = '-'; e2.style.position = 'static';
+             eRegion.appendChild(e1);
+             eRegion.appendChild(e2);
+             
+             eRegion.animate([
+                { transform: 'translate(-50%, -50%) scale(1)' },
+                { transform: 'translate(-50%, -50%) scale(1.1)' },
+                { transform: 'translate(-50%, -50%) scale(1)' }
+             ], { duration: 2000, iterations: Infinity });
+
+             molDiv.appendChild(eRegion);
+             container.appendChild(molDiv);
+        }
+
+        function renderMoleculeH2O(container) {
+             const molDiv = document.createElement('div');
+             molDiv.className = 'relative w-full h-full flex items-center justify-center scale-90';
+
+             // Atom Oksigen (Pusat)
+             const atomO = document.createElement('div');
+             atomO.className = 'absolute z-20 flex flex-wrap justify-center items-center rounded-full';
+             atomO.style.width = '45px'; atomO.style.height = '45px';
+             
+             // 8 Proton & 8 Neutron untuk Inti Oksigen
+             for(let i=0; i<8; i++) {
+                 let p = document.createElement('div'); p.className='particle proton'; p.textContent='+'; 
+                 p.style.position='absolute'; p.style.transform=`translate(${(Math.random()-0.5)*18}px, ${(Math.random()-0.5)*18}px)`; 
+                 p.style.width='14px'; p.style.height='14px'; p.style.fontSize='10px'; atomO.appendChild(p);
+                 
+                 let n = document.createElement('div'); n.className='particle neutron'; n.textContent=''; 
+                 n.style.position='absolute'; n.style.transform=`translate(${(Math.random()-0.5)*18}px, ${(Math.random()-0.5)*18}px)`; 
+                 n.style.width='14px'; n.style.height='14px'; atomO.appendChild(n);
+             }
+             molDiv.appendChild(atomO);
+
+             // Orbit Dalam Oksigen (2 elektron)
+             const orbitO1 = document.createElement('div');
+             orbitO1.className = 'absolute border border-dashed border-gray-400 rounded-full z-10 orbit-animated';
+             orbitO1.style.width = '80px'; orbitO1.style.height = '80px';
+             orbitO1.style.animationDuration = '3s';
+             const eO1_1 = document.createElement('div'); eO1_1.className = 'particle electron absolute'; eO1_1.textContent = '-'; eO1_1.style.left = '35px'; eO1_1.style.top = '-5px'; orbitO1.appendChild(eO1_1);
+             const eO1_2 = document.createElement('div'); eO1_2.className = 'particle electron absolute'; eO1_2.textContent = '-'; eO1_2.style.left = '35px'; eO1_2.style.top = '75px'; orbitO1.appendChild(eO1_2);
+             molDiv.appendChild(orbitO1);
+
+             // Orbit Luar Oksigen 
+             const orbitO2 = document.createElement('div');
+             orbitO2.className = 'absolute border border-dashed border-gray-400 rounded-full z-10';
+             orbitO2.style.width = '180px'; orbitO2.style.height = '180px';
+             molDiv.appendChild(orbitO2);
+
+             // Atom Hidrogen 1 (Kiri Bawah)
+             const h1Wrapper = document.createElement('div');
+             h1Wrapper.className = 'absolute flex items-center justify-center';
+             h1Wrapper.style.transform = 'translate(-70px, 60px)';
+             
+             const atomH1 = document.createElement('div');
+             atomH1.className = 'absolute z-20 flex items-center justify-center';
+             const pH1 = document.createElement('div'); pH1.className = 'particle proton'; pH1.textContent = '+'; atomH1.appendChild(pH1);
+             h1Wrapper.appendChild(atomH1);
+
+             const orbitH1 = document.createElement('div');
+             orbitH1.className = 'absolute border border-dashed border-gray-400 rounded-full z-10';
+             orbitH1.style.width = '70px'; orbitH1.style.height = '70px';
+             h1Wrapper.appendChild(orbitH1);
+             molDiv.appendChild(h1Wrapper);
+
+             // Ikatan Kovalen H1-O
+             const bond1 = document.createElement('div');
+             bond1.className = 'absolute z-30 flex gap-1';
+             bond1.style.transform = 'translate(-40px, 35px)';
+             const eb1_1 = document.createElement('div'); eb1_1.className = 'particle electron relative'; eb1_1.textContent = '-'; eb1_1.style.position='static';
+             const eb1_2 = document.createElement('div'); eb1_2.className = 'particle electron relative'; eb1_2.textContent = '-'; eb1_2.style.position='static';
+             bond1.appendChild(eb1_1); bond1.appendChild(eb1_2);
+             bond1.animate([{ transform: 'translate(-40px, 35px) scale(1)' }, { transform: 'translate(-40px, 35px) scale(1.15)' }, { transform: 'translate(-40px, 35px) scale(1)' }], { duration: 1500, iterations: Infinity });
+             molDiv.appendChild(bond1);
+
+             // Atom Hidrogen 2 (Kanan Bawah)
+             const h2Wrapper = document.createElement('div');
+             h2Wrapper.className = 'absolute flex items-center justify-center';
+             h2Wrapper.style.transform = 'translate(70px, 60px)';
+             
+             const atomH2 = document.createElement('div');
+             atomH2.className = 'absolute z-20 flex items-center justify-center';
+             const pH2 = document.createElement('div'); pH2.className = 'particle proton'; pH2.textContent = '+'; atomH2.appendChild(pH2);
+             h2Wrapper.appendChild(atomH2);
+
+             const orbitH2 = document.createElement('div');
+             orbitH2.className = 'absolute border border-dashed border-gray-400 rounded-full z-10';
+             orbitH2.style.width = '70px'; orbitH2.style.height = '70px';
+             h2Wrapper.appendChild(orbitH2);
+             molDiv.appendChild(h2Wrapper);
+
+             // Ikatan Kovalen H2-O
+             const bond2 = document.createElement('div');
+             bond2.className = 'absolute z-30 flex gap-1';
+             bond2.style.transform = 'translate(40px, 35px)';
+             const eb2_1 = document.createElement('div'); eb2_1.className = 'particle electron relative'; eb2_1.textContent = '-'; eb2_1.style.position='static';
+             const eb2_2 = document.createElement('div'); eb2_2.className = 'particle electron relative'; eb2_2.textContent = '-'; eb2_2.style.position='static';
+             bond2.appendChild(eb2_1); bond2.appendChild(eb2_2);
+             bond2.animate([{ transform: 'translate(40px, 35px) scale(1)' }, { transform: 'translate(40px, 35px) scale(1.15)' }, { transform: 'translate(40px, 35px) scale(1)' }], { duration: 1500, iterations: Infinity, delay: 500 });
+             molDiv.appendChild(bond2);
+
+             // Elektron Bebas pada Oksigen
+             const freeE1 = document.createElement('div'); freeE1.className = 'particle electron absolute'; freeE1.textContent = '-'; freeE1.style.transform = 'translate(0px, -90px)'; molDiv.appendChild(freeE1);
+             const freeE2 = document.createElement('div'); freeE2.className = 'particle electron absolute'; freeE2.textContent = '-'; freeE2.style.transform = 'translate(-65px, -65px)'; molDiv.appendChild(freeE2);
+             const freeE3 = document.createElement('div'); freeE3.className = 'particle electron absolute'; freeE3.textContent = '-'; freeE3.style.transform = 'translate(65px, -65px)'; molDiv.appendChild(freeE3);
+             const freeE4 = document.createElement('div'); freeE4.className = 'particle electron absolute'; freeE4.textContent = '-'; freeE4.style.transform = 'translate(0px, -65px)'; molDiv.appendChild(freeE4);
+
+             container.appendChild(molDiv);
+        }
+
+        // === LOGIKA LATIHAN (DRAG AND DROP) ===
+        const tasks = [
+            { id: 'he_atom', name: 'Atom Helium (He)', hint: 'Atom ini stabil dengan 2 proton, 2 neutron, dan 2 elektron.', target: { p: 2, n: 2, e: 2 } },
+            { id: 'li_kation', name: 'Kation Litium (Li⁺)', hint: 'Ion positif. Memiliki 3 proton, 4 neutron. Lepaskan 1 elektron dari keadaan netralnya (3 elektron) agar stabil.', target: { p: 3, n: 4, e: 2 } },
+            { id: 'f_anion', name: 'Anion Fluorida (F⁻)', hint: 'Ion negatif. Memiliki 9 proton, 10 neutron. Menerima 1 elektron tambahan dari luar (menjadi 10) untuk memenuhi kulit luarnya.', target: { p: 9, n: 10, e: 10 } }
+        ];
+        let currentTaskIndex = 0;
+        let currentBuild = { p: 0, n: 0, e: 0 };
+
+        function loadTask(index) {
+            const task = tasks[index];
+            document.getElementById('task-name').textContent = task.name;
+            document.getElementById('task-hint').textContent = `Petunjuk: ${task.hint}`;
+            resetLatihan();
+        }
+
+        function updateBuildStats() {
+            document.getElementById('current-p').textContent = currentBuild.p;
+            document.getElementById('current-n').textContent = currentBuild.n;
+            document.getElementById('current-e').textContent = currentBuild.e;
+            
+            const charge = currentBuild.p - currentBuild.e;
+            const chargeEl = document.getElementById('current-charge');
+            
+            if (currentBuild.p === 0 && currentBuild.e === 0) {
+                 chargeEl.textContent = "Muatan: 0 (Kosong)";
+                 chargeEl.className = "text-lg font-bold text-gray-500 mt-2";
+            } else if (charge === 0) {
+                chargeEl.textContent = "Muatan: 0 (Netral)";
+                chargeEl.className = "text-lg font-bold text-gray-800 mt-2";
+            } else if (charge > 0) {
+                chargeEl.textContent = `Muatan: +${charge} (Kation)`;
+                chargeEl.className = "text-lg font-bold text-red-600 mt-2";
+            } else {
+                chargeEl.textContent = `Muatan: ${charge} (Anion)`;
+                chargeEl.className = "text-lg font-bold text-purple-600 mt-2";
+            }
+
+            updateOrbitAnimation();
+        }
+
+        function resetLatihan() {
+            currentBuild = { p: 0, n: 0, e: 0 };
+            document.getElementById('nucleus-particles').innerHTML = '';
+            document.getElementById('orbiting-electrons').innerHTML = '';
+            document.getElementById('orbiting-electrons').classList.add('hidden');
+            document.querySelector('#nucleus-dropzone span').style.display = 'block'; 
+            updateBuildStats();
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData("particleType", ev.target.id);
+            ev.dataTransfer.effectAllowed = "copy";
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.dataTransfer.dropEffect = "copy";
+        }
+
+        function dragEnterNucleus(ev) { document.getElementById('nucleus-dropzone').classList.add('bg-blue-100'); }
+        function dragLeaveNucleus(ev) { document.getElementById('nucleus-dropzone').classList.remove('bg-blue-100'); }
+        function dragEnterOrbit(ev) { document.getElementById('orbit-dropzone').classList.add('bg-yellow-200'); }
+        function dragLeaveOrbit(ev) { document.getElementById('orbit-dropzone').classList.remove('bg-yellow-200'); }
+
+        function dropNucleus(ev) {
+            ev.preventDefault();
+            dragLeaveNucleus(ev);
+            const pType = ev.dataTransfer.getData("particleType");
+            
+            if (pType === 'drag-proton' || pType === 'drag-neutron') {
+                document.querySelector('#nucleus-dropzone span').style.display = 'none';
+                
+                const clone = document.getElementById(pType).cloneNode(true);
+                clone.id = '';
+                clone.draggable = false;
+                clone.style.position = 'relative';
+                clone.style.width = '24px';
+                clone.style.height = '24px';
+                clone.style.fontSize = '12px';
+                clone.ondragstart = null; 
+                
+                document.getElementById('nucleus-particles').appendChild(clone);
+                
+                if (pType === 'drag-proton') currentBuild.p++;
+                if (pType === 'drag-neutron') currentBuild.n++;
+                
+                updateBuildStats();
+            } else {
+                showMessage("Elektron harus diletakkan di area orbit!", "error");
+            }
+        }
+
+        function dropElectron(ev) {
+            ev.preventDefault();
+            dragLeaveOrbit(ev);
+            const pType = ev.dataTransfer.getData("particleType");
+            
+            const rect = document.getElementById('nucleus-dropzone').getBoundingClientRect();
+            if (ev.clientX >= rect.left && ev.clientX <= rect.right &&
+                ev.clientY >= rect.top && ev.clientY <= rect.bottom) {
+                return; 
+            }
+
+            if (pType === 'drag-electron') {
+                currentBuild.e++;
+                updateBuildStats();
+            } else {
+                showMessage("Proton dan Neutron harus diletakkan di Inti Atom!", "error");
+            }
+        }
+
+        function updateOrbitAnimation() {
+            const orbitContainer = document.getElementById('orbiting-electrons');
+            orbitContainer.innerHTML = '';
+            
+            if (currentBuild.e > 0) {
+                orbitContainer.classList.remove('hidden');
+                const eCount = currentBuild.e;
+                const size = 260; // Ukuran sesuai container di html
+                
+                const angleStep = 360 / eCount;
+                for (let i = 0; i < eCount; i++) {
+                    const e = document.createElement('div');
+                    e.className = 'particle electron absolute';
+                    e.textContent = '-';
+                    
+                    const angle = (angleStep * i) * (Math.PI / 180);
+                    const radius = size / 2;
+                    
+                    const x = (size/2) + radius * Math.cos(angle) - 5;
+                    const y = (size/2) + radius * Math.sin(angle) - 5;
+                    
+                    e.style.left = `${x}px`;
+                    e.style.top = `${y}px`;
+                    orbitContainer.appendChild(e);
+                }
+            } else {
+                orbitContainer.classList.add('hidden');
+            }
+        }
+
+        function checkAnswer() {
+            const target = tasks[currentTaskIndex].target;
+            
+            if (currentBuild.p === 0 && currentBuild.n === 0 && currentBuild.e === 0) {
+                 showMessage("Anda belum memasukkan partikel apapun.", "info");
+                 return;
+            }
+
+            if (currentBuild.p === target.p && currentBuild.n === target.n && currentBuild.e === target.e) {
+                document.getElementById('success-modal').classList.remove('hidden');
+                if (currentTaskIndex === tasks.length - 1) {
+                     document.getElementById('success-msg').innerHTML = "Luar biasa! Anda telah menyelesaikan semua latihan merakit.<br>Anda sudah memahami struktur atom dan ion.";
+                     document.querySelector('#success-modal button').textContent = "Selesai & Ulangi";
+                } else {
+                     document.getElementById('success-msg').textContent = "Anda berhasil merakit partikel dengan benar.";
+                     document.querySelector('#success-modal button').textContent = "Tugas Selanjutnya";
+                }
+            } else {
+                let msg = "Belum tepat. Cek kembali jumlah ";
+                let errors = [];
+                if (currentBuild.p !== target.p) errors.push("Proton");
+                if (currentBuild.n !== target.n) errors.push("Neutron");
+                if (currentBuild.e !== target.e) errors.push("Elektron");
+                
+                msg += errors.join(', ') + ".";
+                showMessage(msg, "error");
+            }
+        }
+
+        function nextTask() {
+            document.getElementById('success-modal').classList.add('hidden');
+            currentTaskIndex++;
+            if (currentTaskIndex >= tasks.length) {
+                currentTaskIndex = 0; // Ulangi dari awal
+            }
+            loadTask(currentTaskIndex);
+        }
+
+        // --- Inisialisasi Aplikasi Saat Memuat ---
+        window.onload = () => {
+            loadTask(0); 
+            initAll3DScenes();
+            animate3D();
+        };
+
+    </script>
+</body>
+</html>
